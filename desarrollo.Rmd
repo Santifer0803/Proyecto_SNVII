@@ -8,13 +8,40 @@ output: html_document
 Se inicia cargando las librerías necesarias.
 
 ```{r librerias}
-pacman::p_load(ggplot2,
-               readr)
+pacman::p_load(dplyr,
+               ggplot2,
+               jsonlite)
 ```
 
 Se procede a cargar los datos.
 
 ```{r carga_datos}
-eventos_EEUU <- read_csv("data/Eventos EEUU.csv")
+eventos_EEUU <- fromJSON("data/Eventos EEUU.json")[[2]]
+```
+
+Algunas correcciones de formato.
+
+```{r correccion_formato}
+# Formato de la fecha
+eventos_EEUU$begDate <-
+  as.Date(as.character(eventos_EEUU$begDate), format = "%Y%m%d")
+eventos_EEUU$endDate <-
+  as.Date(as.character(eventos_EEUU$endDate), format = "%Y%m%d")
+
+# Nombre de las columnas (coste en millones de dólares y coste ajustado al 2024)
+colnames(eventos_EEUU) <-
+  c(
+    "nombre",
+    "desastre",
+    "inicio",
+    "final",
+    "coste_ajustado",
+    "coste_original",
+    "muertes"
+  )
+
+# Columna de duración del desastre (en días)
+eventos_EEUU <- eventos_EEUU %>%
+  mutate(duracion = as.integer(final - inicio))
 ```
 
