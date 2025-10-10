@@ -5,10 +5,13 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
+# Preparación
+
 Se inicia cargando las librerías necesarias.
 
 ```{r librerias}
-pacman::p_load(dplyr,
+pacman::p_load(cowplot,
+               dplyr,
                ggplot2,
                jsonlite,
                lubridate
@@ -45,6 +48,24 @@ colnames(eventos_EEUU) <-
 # Columna de duración del desastre (en días)
 eventos_EEUU <- eventos_EEUU %>%
   mutate(duracion = as.integer(final - inicio))
+
+# Se ponen los nombres de los desastres en español
+eventos_EEUU <- eventos_EEUU %>%
+  mutate(
+    desastre = case_when(
+      desastre == "Flooding" ~ "Inundación",
+      desastre == "Tropical Cyclone" ~ "Ciclón tropical",
+      desastre == "Drought" ~ "Sequía",
+      desastre == "Freeze" ~ "Helada",
+      desastre == "Severe Storm" ~ "Tormenta severa",
+      desastre == "Winter Storm" ~ "Tormenta de nieve",
+      desastre == "Wildfire" ~ "Incendio"
+    )
+  )
+
+# Se ordena por fecha de inicio
+eventos_EEUU <- eventos_EEUU[order(eventos_EEUU$inicio), ]
+rownames(eventos_EEUU) <- NULL
 ```
 
 Se agrega la variable de estación climatológica.
@@ -57,6 +78,118 @@ eventos_EEUU <- eventos_EEUU %>%
       month(inicio) %in% c(3, 4, 5)  ~ "Primavera",
       month(inicio) %in% c(6, 7, 8)  ~ "Verano",
       month(inicio) %in% c(9, 10, 11) ~ "Otoño"
+    )
+  )
+```
+
+# Gráficos
+
+## Variables individuales
+
+Inicialmente, empezamos observando las variables de forma individual.
+
+```{r individuales, message = FALSE}
+# Gráfico de barras del tipo de desastres
+ggplot(eventos_EEUU, aes(x = desastre)) +
+  geom_bar(fill = "#54008B", color = "black") +
+  labs(x = "Tipo de desastre", y = "Cantidad") +
+  theme_cowplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Histograma de cantidad de muertes
+ggplot(eventos_EEUU, aes(x = muertes)) +
+  geom_histogram(fill = "#54008B", color = "black") +
+  labs(x = "Muertes", y = "Cantidad de desastres") +
+  theme_cowplot()
+
+# Histograma de diferencia de días entre el inicio de un desastre y el siguiente
+ggplot(data.frame(diferencia = as.integer(diff.Date(
+  eventos_EEUU$inicio
+))), aes(x = diferencia)) +
+  geom_histogram(fill = "#54008B", color = "black") +
+  labs(x = "Diferencia de días", y = "Cantidad de desastres") +
+  theme_cowplot()
+```
+
+## Series de tiempo
+
+Posteriormente, se muestran algunas series de tiempo de las variables disponibles. Las fechas son tomadas del inicio del desastre natural.
+
+```{r series_tiempo}
+# Serie de tiempo del coste ajustado
+eventos_EEUU %>%
+  ggplot(aes(inicio, coste_ajustado)) +
+  geom_line(color = "#001889") +
+  geom_point(color = "#54008B") +
+  labs(x = "Fecha", y = "Coste ajustado (millones de dólares)") +
+  theme_cowplot()
+
+# Serie de tiempo de la duración
+eventos_EEUU %>%
+  ggplot(aes(inicio, duracion)) +
+  geom_line(color = "#001889") +
+  geom_point(color = "#54008B") +
+  labs(x = "Fecha", y = "Duración del desastre (días)") +
+  theme_cowplot()
+```
+
+## Filtrados
+
+A continuación, se procede con algunos gráficos que poseen filtros con respecto a algunas variables, esto para interpretar mejor la distribución de los diversos desastres.
+
+```{r filtros}
+# Muertes filtradas por tipo de desastre
+ggplot(eventos_EEUU, aes(x = desastre, y = muertes, fill = desastre)) +
+  geom_boxplot() +
+  labs(x = "Tipo de desastre", y = "Muertes") +
+  theme_cowplot() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1),
+        legend.position = "none") +
+  scale_fill_manual(
+    values = c(
+      "Inundación" = "#001889",
+      "Tormenta severa" = "#54008B",
+      "Tormenta de nieve" = "#81008D",
+      "Incendio" = "#A40A8A",
+      "Ciclón tropical" = "#C03180",
+      "Sequía" = "#D5536D",
+      "Helada" = "#E4764E"
+    )
+  )
+
+# Coste ajustado filtrado por tipo de desastre
+ggplot(eventos_EEUU,
+       aes(x = desastre, y = coste_ajustado, fill = desastre)) +
+  geom_boxplot() +
+  labs(x = "Tipo de desastre", y = "Coste ajustado (millones de dólares)") +
+  theme_cowplot() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1),
+        legend.position = "none") +
+  scale_fill_manual(
+    values = c(
+      "Inundación" = "#001889",
+      "Tormenta severa" = "#54008B",
+      "Tormenta de nieve" = "#81008D",
+      "Incendio" = "#A40A8A",
+      "Ciclón tropical" = "#C03180",
+      "Sequía" = "#D5536D",
+      "Helada" = "#E4764E"
+    )
+  )
+
+# Coste ajustado filtrado por estación del año
+ggplot(eventos_EEUU,
+       aes(x = estacion, y = coste_ajustado, fill = estacion)) +
+  geom_boxplot() +
+  labs(x = "Estación", y = "Coste ajustado (millones de dólares)") +
+  theme_cowplot() +
+  theme(legend.position = "none") +
+  scale_fill_manual(
+    values = c(
+      "Primavera" = "#54008B",
+      "Verano" = "#81008D",
+      "Otoño" = "#A40A8A",
+      "Invierno" = "#C03180"
     )
   )
 ```
