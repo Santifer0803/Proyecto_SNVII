@@ -10,7 +10,9 @@ Se inicia cargando las librerías necesarias.
 ```{r librerias}
 pacman::p_load(dplyr,
                ggplot2,
-               jsonlite)
+               jsonlite,
+               lubridate
+               )
 ```
 
 Se procede a cargar los datos.
@@ -43,5 +45,19 @@ colnames(eventos_EEUU) <-
 # Columna de duración del desastre (en días)
 eventos_EEUU <- eventos_EEUU %>%
   mutate(duracion = as.integer(final - inicio))
+```
+
+Se agrega la variable de estación climatológica.
+
+```{r estacion}
+eventos_EEUU <- eventos_EEUU %>%
+  mutate(
+    estacion = case_when(
+      month(inicio) %in% c(12, 1, 2) ~ "Invierno",
+      month(inicio) %in% c(3, 4, 5)  ~ "Primavera",
+      month(inicio) %in% c(6, 7, 8)  ~ "Verano",
+      month(inicio) %in% c(9, 10, 11) ~ "Otoño"
+    )
+  )
 ```
 
