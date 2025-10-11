@@ -98,7 +98,7 @@ ggplot(eventos_EEUU, aes(x = desastre)) +
 
 # Histograma de cantidad de muertes
 ggplot(eventos_EEUU, aes(x = muertes)) +
-  geom_histogram(fill = "#54008B", color = "black") +
+  geom_histogram(fill = "#54008B", color = "black", binwidth = 50) +
   labs(x = "Muertes", y = "Cantidad de desastres") +
   theme_cowplot()
 
@@ -106,7 +106,7 @@ ggplot(eventos_EEUU, aes(x = muertes)) +
 ggplot(data.frame(diferencia = as.integer(diff.Date(
   eventos_EEUU$inicio
 ))), aes(x = diferencia)) +
-  geom_histogram(fill = "#54008B", color = "black") +
+  geom_histogram(fill = "#54008B", color = "black", binwidth = 14) +
   labs(x = "Diferencia de días", y = "Cantidad de desastres") +
   theme_cowplot()
 ```
