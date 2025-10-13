@@ -194,7 +194,7 @@ monthplot(
 A continuación, se procede con algunos gráficos que poseen filtros con respecto a algunas variables, esto para interpretar mejor la distribución de los diversos desastres.
 
 ```{r filtros}
-# Muertes filtradas por duración del desastre
+# Duración filtrada por tipo de desastre
 ggplot(eventos_EEUU, aes(x = desastre, y = duracion, fill = desastre)) +
   geom_boxplot() +
   labs(x = "Tipo de desastre", y = "Duración del desastre (días)") +
