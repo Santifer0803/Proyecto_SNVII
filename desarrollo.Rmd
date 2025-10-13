@@ -100,7 +100,7 @@ ggplot(conteo_anual, aes(x = anno, y = cantidad)) +
   geom_col(fill = "darkgreen") +
   labs(
     x = "Año",
-    y = "Número de desastres"
+    y = "Cantidad de desastres"
   ) +
   theme_cowplot()
 
