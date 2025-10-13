@@ -14,7 +14,8 @@ pacman::p_load(cowplot,
                dplyr,
                ggplot2,
                jsonlite,
-               lubridate
+               lubridate,
+               corrplot
                )
 ```
 
@@ -89,6 +90,32 @@ eventos_EEUU <- eventos_EEUU %>%
 Inicialmente, empezamos observando las variables de forma individual.
 
 ```{r individuales, message = FALSE}
+# DataFrame auxiliar con la cantidad de desastres por año (usando la fecha de inicio)
+conteo_anual <- eventos_EEUU %>%
+  group_by(anno = year(eventos_EEUU$inicio)) %>%
+  summarise(cantidad = n())
+
+# Gráfico de barras de la cantidad de desastres por año
+ggplot(conteo_anual, aes(x = anno, y = cantidad)) +
+  geom_col(fill = "darkgreen") +
+  labs(
+    x = "Año",
+    y = "Número de desastres"
+  ) +
+  theme_cowplot()
+
+# Histograma del coste ajustado
+ggplot(eventos_EEUU, aes(x = coste_ajustado)) +
+  geom_histogram(fill = "salmon2", color = "black") +
+  labs(x = "Coste ajustado (Millones de dólares)", y = "Cantidad de desastres") +
+  theme_cowplot()
+
+# Histograma de la duración de los desastres
+ggplot(eventos_EEUU, aes(x = duracion)) +
+  geom_histogram(fill = "orangered", color = "black") +
+  labs(x = "Duración del desastre (días)", y = "Cantidad de desastres") +
+  theme_cowplot()
+
 # Gráfico de barras del tipo de desastres
 ggplot(eventos_EEUU, aes(x = desastre)) +
   geom_bar(fill = "#54008B", color = "black") +
@@ -124,6 +151,14 @@ eventos_EEUU %>%
   labs(x = "Fecha", y = "Coste ajustado (millones de dólares)") +
   theme_cowplot()
 
+# Serie de tiempo de las muertes
+eventos_EEUU %>%
+  ggplot(aes(inicio, muertes)) +
+  geom_line(color = "#001889") +
+  geom_point(color = "#54008B") +
+  labs(x = "Fecha", y = "Muertes") +
+  theme_cowplot()
+
 # Serie de tiempo de la duración
 eventos_EEUU %>%
   ggplot(aes(inicio, duracion)) +
@@ -131,6 +166,27 @@ eventos_EEUU %>%
   geom_point(color = "#54008B") +
   labs(x = "Fecha", y = "Duración del desastre (días)") +
   theme_cowplot()
+
+# Guardamos los datos mensuales del coste ajustado
+coste_ts <- eventos_EEUU %>%
+  mutate(mes = format(as.Date(inicio), "%Y-%m")) %>%
+  group_by(mes) %>%
+  summarise(coste_total = sum(coste_ajustado, na.rm = TRUE)) %>%
+  ungroup()
+
+# Convertimos los datos a un objeto ts
+coste_ts <- ts(coste_ts$coste_total, 
+            start = c(as.numeric(substr(coste_ts$mes[1], 1, 4)), 
+                      as.numeric(substr(coste_ts$mes[1], 6, 7))),
+            frequency = 12)
+
+# Monthplot del coste ajustado
+monthplot(
+  coste_ts, labels = c("Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago",
+    "Sep", "Oct", "Nov", "Dic"),
+  xlab = "Mes", ylab = "Coste ajustado (Millones de dólares)", 
+  col = "darkmagenta", col.base = "tomato"
+)
 ```
 
 ## Filtrados
@@ -138,6 +194,46 @@ eventos_EEUU %>%
 A continuación, se procede con algunos gráficos que poseen filtros con respecto a algunas variables, esto para interpretar mejor la distribución de los diversos desastres.
 
 ```{r filtros}
+# Muertes filtradas por duración del desastre
+ggplot(eventos_EEUU, aes(x = desastre, y = duracion, fill = desastre)) +
+  geom_boxplot() +
+  labs(x = "Tipo de desastre", y = "Duración del desastre (días)") +
+  theme_cowplot() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1),
+        legend.position = "none") +
+  scale_fill_manual(
+    values = c(
+      "Inundación" = "#001889",
+      "Tormenta severa" = "#54008B",
+      "Tormenta de nieve" = "#81008D",
+      "Incendio" = "#A40A8A",
+      "Ciclón tropical" = "#C03180",
+      "Sequía" = "#D5536D",
+      "Helada" = "#E4764E"
+    )
+  )
+
+# Gráfico de barras apiladas de tipo de desastre según la estación
+ggplot(eventos_EEUU, aes(x = estacion, fill = desastre)) +
+  geom_bar() +
+  labs(
+    x = "Estación del año",
+    y = "Cantidad de desastres",
+    fill = "Tipo de desastre"
+  ) +
+  theme_cowplot() +
+  scale_fill_manual(
+    values = c(
+      "Inundación" = "cyan3",
+      "Tormenta severa" = "violet",
+      "Tormenta de nieve" = "mediumvioletred",
+      "Incendio" = "springgreen",
+      "Ciclón tropical" = "darkorange",
+      "Sequía" = "tomato2",
+      "Helada" = "gold2"
+    )
+  )
+
 # Muertes filtradas por tipo de desastre
 ggplot(eventos_EEUU, aes(x = desastre, y = muertes, fill = desastre)) +
   geom_boxplot() +
@@ -193,4 +289,26 @@ ggplot(eventos_EEUU,
     )
   )
 ```
+
+## Matriz de correlación
+
+A continuación se realiza la matriz de correlación entre las variables de coste ajustado, muertes y duración.
+
+```{r matriz_corr}
+corrplot(cor(data.frame(coste_ajustado = eventos_EEUU$coste_ajustado, 
+                    muertes = eventos_EEUU$muertes, 
+                    duracion = eventos_EEUU$duracion)), method = "square", 
+         type = "upper", tl.col = "black", tl.srt = 60, addCoef.col = "black")
+```
+
+Como se muestra una correlación considerable entre el coste ajustado y las muertes, se creará un gráfico de dispersión entre estas variables con una recta de regresión para visualizar la tendencia.
+
+```{r grafico_dispersion_lm}
+ggplot(eventos_EEUU, aes(x = muertes, y = coste_ajustado)) +
+  geom_point(color = "mediumorchid", size = 2) +
+  geom_smooth(method = "lm", se = TRUE, color = "springgreen2") +
+  labs(x = "Muertes", y = "Coste ajustado (Millones de dólares)") +
+  theme_cowplot()
+```
+
 
