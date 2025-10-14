@@ -97,7 +97,7 @@ conteo_anual <- eventos_EEUU %>%
 
 # Gráfico de barras de la cantidad de desastres por año
 ggplot(conteo_anual, aes(x = anno, y = cantidad)) +
-  geom_col(fill = "darkgreen") +
+  geom_col(fill = "#54008B") +
   labs(
     x = "Año",
     y = "Cantidad de desastres"
@@ -106,13 +106,13 @@ ggplot(conteo_anual, aes(x = anno, y = cantidad)) +
 
 # Histograma del coste ajustado
 ggplot(eventos_EEUU, aes(x = coste_ajustado)) +
-  geom_histogram(fill = "salmon2", color = "black") +
+  geom_histogram(fill = "#54008B", color = "black") +
   labs(x = "Coste ajustado (Millones de dólares)", y = "Cantidad de desastres") +
   theme_cowplot()
 
 # Histograma de la duración de los desastres
 ggplot(eventos_EEUU, aes(x = duracion)) +
-  geom_histogram(fill = "orangered", color = "black") +
+  geom_histogram(fill = "#54008B", color = "black") +
   labs(x = "Duración del desastre (días)", y = "Cantidad de desastres") +
   theme_cowplot()
 
@@ -185,7 +185,7 @@ monthplot(
   coste_ts, labels = c("Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago",
     "Sep", "Oct", "Nov", "Dic"),
   xlab = "Mes", ylab = "Coste ajustado (Millones de dólares)", 
-  col = "darkmagenta", col.base = "tomato"
+  col = "#54008B", col.base = "#001889"
 )
 ```
 
