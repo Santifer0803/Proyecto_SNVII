@@ -304,10 +304,10 @@ corrplot(cor(data.frame(coste_ajustado = eventos_EEUU$coste_ajustado,
 Como se muestra una correlación considerable entre el coste ajustado y las muertes, se creará un gráfico de dispersión entre estas variables con una recta de regresión para visualizar la tendencia.
 
 ```{r grafico_dispersion_lm}
-ggplot(eventos_EEUU, aes(x = muertes, y = coste_ajustado)) +
+ggplot(eventos_EEUU, aes(x = muertes, y = coste_ajustado / 1000)) +
   geom_point(color = "mediumorchid", size = 2) +
-  geom_smooth(method = "lm", se = TRUE, color = "springgreen2") +
-  labs(x = "Muertes", y = "Coste ajustado (Millones de dólares)") +
+  geom_smooth(method = "loess", se = TRUE, color = "springgreen2") +
+  labs(x = "Muertes", y = "Coste ajustado (Miles de millones de dólares)") +
   theme_cowplot()
 ```
 
