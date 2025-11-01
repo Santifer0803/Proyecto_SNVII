@@ -83,7 +83,7 @@ eventos_EEUU <- eventos_EEUU %>%
   )
 ```
 
-# Gráficos
+# Análisis exploratorio de datos
 
 ## Variables individuales
 
@@ -310,5 +310,7 @@ ggplot(eventos_EEUU, aes(x = muertes, y = coste_ajustado / 1000)) +
   labs(x = "Muertes", y = "Coste ajustado (Miles de millones de dólares)") +
   theme_cowplot()
 ```
+
+# Desarrollo del modelo
 
 
