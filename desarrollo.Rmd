@@ -10,12 +10,13 @@ output: html_document
 Se inicia cargando las librerías necesarias.
 
 ```{r librerias}
-pacman::p_load(cowplot,
+pacman::p_load(corrplot,
+               cowplot,
                dplyr,
                ggplot2,
+               evd,
                jsonlite,
-               lubridate,
-               corrplot
+               lubridate
                )
 ```
 
@@ -313,4 +314,136 @@ ggplot(eventos_EEUU, aes(x = muertes, y = coste_ajustado / 1000)) +
 
 # Desarrollo del modelo
 
+## Ajuste del modelo
 
+Inicialmente, se realiza un ajuste de los valores disponibles a través de máxima verosimilitud. Esto corresponde a ajustar una GEV con unos parámetros concretos, pues, se tienen los valores máximos de los desastres naturales.
+
+```{r ajuste_modelo}
+# Se fija una semilla para reproducibilidad
+set.seed(333)
+
+# Se realiza el ajuste por máxima veosimilitud (se ajusta la escala para asegurar convergencia)
+(optimizacion <- fgev(eventos_EEUU$coste_ajustado / 1000))
+```
+
+## Resultados del modelo (caso base)
+
+Se inicia mostrando una comparación de la densidad teórica y de la densidad obtenida en los datos.
+
+```{r densidades}
+# Densidad teórica de la GEV
+densidad_teorica <-
+  dgev(
+    seq(
+      min(eventos_EEUU$coste_ajustado / 1000),
+      max(eventos_EEUU$coste_ajustado / 1000),
+      length.out = 1000
+    ),
+    loc = optimizacion$estimate["loc"],
+    scale = optimizacion$estimate["scale"],
+    shape = optimizacion$estimate["shape"]
+  )
+
+# Se crea el gráfico para ver la distribución teórica de la GEV
+data.frame(x = seq(
+  min(eventos_EEUU$coste_ajustado / 1000),
+  max(eventos_EEUU$coste_ajustado / 1000),
+  length.out = 1000
+),
+dens = densidad_teorica) %>%
+  ggplot() +
+  geom_line(
+    aes(x = x, y = dens),
+    color = "red",
+    linewidth = 1.2
+  ) +
+  labs(x = "Coste ajustado (miles de millones de dólares)",
+       y = "Densidad") +
+  theme_cowplot()
+
+# Gráfico de la densidad obtenida con los datos
+eventos_EEUU %>%
+  ggplot() +
+  geom_density(
+    aes(x = coste_ajustado / 1000),
+    color = "black",
+    alpha = 0.6
+  ) +
+  labs(x = "Coste ajustado (miles de millones de dólares)",
+       y = "Densidad") +
+  theme_cowplot()
+```
+
+Debido a que se tienen 403 datos, la densidad de estos se ve más afectada por los casos más extremos, como el Huracán Katrina, lo cual disminuye la probabilidad en los valores bajos y lo aumenta en los altos. En la densidad teórica se pueden agregar los datos deseados, lo cual hace que se muestren probabilidades más realistas.
+
+Se procede a mostrar algunos cuantiles de la distribución correspondiente.
+
+```{r cuantiles_teoricos}
+# Cuantiles 50%, 90%, 95% y 99% en miles de millones de dólares
+cuantiles <- qgev(
+  c(0.5, 0.9, 0.95, 0.99),
+  loc = optimizacion$estimate["loc"],
+  scale = optimizacion$estimate["scale"],
+  shape = optimizacion$estimate["shape"],
+  lower.tail = TRUE
+)
+
+# Tabla de resumen
+data.frame("cuantiles" = c(0.5, 0.9, 0.95, 0.99),
+           "valor" = cuantiles * 1e9)
+```
+
+La interpretación de la tabla es la siguiente: teóricamente, hay un $50\%$ de probabilidades de que el coste del desastre natural extremo sea menor o igual a $\$2415841651$. Análogamente con los otros valores.
+
+Por otro lado, el Huracán Katrina es el desastre natural que mayor coste ha tenido en la historia de EEUU, por lo que se procede a calcular el complemento de su percentil.
+
+```{r cuantil_maximo}
+# Coste del Huracán Katrina ajustado al 2024
+eventos_EEUU[which.max(eventos_EEUU$coste_ajustado), "coste_ajustado"] / 1000
+
+# Complemento del percentil más alto (Huracán Katrina)
+pgev(
+  (eventos_EEUU[which.max(eventos_EEUU$coste_ajustado), "coste_ajustado"] / 1000),
+  loc = optimizacion$estimate["loc"],
+  scale = optimizacion$estimate["scale"],
+  shape = optimizacion$estimate["shape"],
+  lower.tail = FALSE
+)
+```
+
+Se calcula el complemento de su percentil debido a que su interpretación resulta más significativa. Si nos basamos en la historia registrada, existe una probabilidad del $0.79\%$ de que, teniendo un desastre natural extremo (que alcance los 1000 millones de dólares en daños con la inflación del 2024), este supere el coste ajustado a 2024 de la catástrofe natural más costosa de la historia de EEUU, correspondiente al Huracán Katrina.
+
+Hay que decir que el porcentaje anterior se presenta de forma teórica, pues las condiciones del Huracán Katrina fueron muy concretas y una gran parte de los daños causados fueron debido al fallo del sistema de diques de Nueva Orleans (buscar referencia). Esto evidencia un grave error humano, el cual, podría haber reducido los daños causados si se hubiera evitado.
+
+## Resultados del modelo (caso pesimista)
+
+Todos los resultados anteriores fueron presentados con los parámetros esperados de la estimación de máxima verosimilitud. No obstante, en el presente análisis se muestra un caso pesimista, en el cual se ajusta la distribución con los parámetros de mayor valor (según el error estándar de cada uno, multiplicado por el cuantil $99\%$ de una normal).
+
+```{r ajuste_pesimista}
+# Se le suma el error estándar con una normal(0, 1) a los parámetros estimados
+param_pes <- optimizacion$estimate + qnorm((1 + 0.99) / 2) * optimizacion$std.err
+
+# Cuantiles 50%, 90%, 95% y 99% en miles de millones de dólares
+cuantiles <- qgev(
+  c(0.5, 0.9, 0.95, 0.99),
+  loc = param_pes[1],
+  scale = param_pes[2],
+  shape = param_pes[3],
+  lower.tail = TRUE
+)
+
+# Tabla de resumen
+data.frame("cuantiles" = c(0.5, 0.9, 0.95, 0.99),
+           "valor" = cuantiles * 1e9)
+
+# Complemento del percentil más alto (Huracán Katrina)
+pgev(
+  (eventos_EEUU[which.max(eventos_EEUU$coste_ajustado), "coste_ajustado"] / 1000),
+  loc = param_pes[1],
+  scale = param_pes[2],
+  shape = param_pes[3],
+  lower.tail = FALSE
+)
+```
+
+El análisis es análogo, aunque se puede ver que, en el caso más extremo (pesimista) que se podría considerar, los valores aumentan considerablemente.
