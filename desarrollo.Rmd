@@ -354,7 +354,7 @@ dens = densidad_teorica) %>%
   ggplot() +
   geom_line(
     aes(x = x, y = dens),
-    color = "red",
+    color = "#81008D",
     linewidth = 1.2
   ) +
   labs(x = "Coste ajustado (miles de millones de dólares)",
@@ -366,7 +366,7 @@ eventos_EEUU %>%
   ggplot() +
   geom_density(
     aes(x = coste_ajustado / 1000),
-    color = "black",
+    color = "#A40A8A",
     alpha = 0.6
   ) +
   labs(x = "Coste ajustado (miles de millones de dólares)",
